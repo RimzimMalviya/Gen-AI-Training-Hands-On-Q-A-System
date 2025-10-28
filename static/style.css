@@ -1,0 +1,4 @@
+body { font-family: Arial; background-color: #f8f8f8; padding: 20px; }
+.chat-box { border: 1px solid #ccc; padding: 10px; background: white; height: 300px; overflow-y: scroll; }
+.user { color: blue; }
+.bot { color: green; }

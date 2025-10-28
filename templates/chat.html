@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Chat</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <h1>Chatbot</h1>
+  <div class="chat-box">
+    {% for m in messages %}
+      <div class="{{ m.role }}">{{ m.text }}</div>
+    {% endfor %}
+  </div>
+  <form action="/chat" method="post">
+    <input type="hidden" name="model" value="{{ model }}">
+    <input type="hidden" name="system_message" value="{{ system_message }}">
+    <input type="hidden" name="enable_rag" value="{{ enable_rag }}">
+    <textarea name="user_input" rows="2" cols="40"></textarea>
+    <button type="submit">Send</button>
+  </form>
+</body>
+</html>

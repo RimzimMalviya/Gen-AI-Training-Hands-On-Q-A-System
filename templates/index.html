@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>AI Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <h1>AI Dashboard</h1>
+  <form action="/chat" method="post" enctype="multipart/form-data">
+    <label>Select Model:</label><br>
+    <select name="model">
+      <option value="azure">Azure AI</option>
+      <option value="huggingface">HuggingFace</option>
+    </select><br><br>
+
+    <label>System Message:</label><br>
+    <textarea name="system_message" rows="3" cols="40"></textarea><br><br>
+
+    <label>Enable RAG:</label>
+    <input type="checkbox" name="enable_rag"><br><br>
+
+    <label>Upload PDF (if RAG enabled):</label>
+    <input type="file" name="pdf"><br><br>
+
+    <button type="submit">Start Chat</button>
+  </form>
+</body>
+</html>
