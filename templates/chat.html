@@ -1,22 +1,89 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>Chat</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <h1>Chatbot</h1>
-  <div class="chat-box">
-    {% for m in messages %}
-      <div class="{{ m.role }}">{{ m.text }}</div>
-    {% endfor %}
-  </div>
-  <form action="/chat" method="post">
-    <input type="hidden" name="model" value="{{ model }}">
-    <input type="hidden" name="system_message" value="{{ system_message }}">
-    <input type="hidden" name="enable_rag" value="{{ enable_rag }}">
-    <textarea name="user_input" rows="2" cols="40"></textarea>
-    <button type="submit">Send</button>
-  </form>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Chat - AI Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-sliders-h"></i> Controls</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Current Model:</strong>
+                    <span id="currentModel" class="badge bg-primary">Loading...</span>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>RAG Status:</strong>
+                    <span id="ragStatus" class="badge bg-secondary">Disabled</span>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button id="clearChat" class="btn btn-warning btn-sm">
+                        <i class="fas fa-broom"></i> Clear Chat
+                    </button>
+                    <button id="toggleRAG" class="btn btn-info btn-sm">
+                        <i class="fas fa-toggle-off"></i> Toggle RAG
+                    </button>
+                    <a href="/" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-cog"></i> Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-upload"></i> Upload Document</h6>
+            </div>
+            <div class="card-body">
+                <input type="file" id="chatDocumentUpload" accept=".pdf" class="form-control form-control-sm">
+                <div id="chatUploadStatus" class="mt-2 small"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-comments"></i> Chat</h4>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="useRAG">
+                    <label class="form-check-label" for="useRAG">Use RAG</label>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div id="chatMessages" class="chat-messages">
+                    <div class="text-center text-muted my-4">
+                        <i class="fas fa-robot fa-2x mb-2"></i>
+                        <p>Start a conversation with your AI assistant!</p>
+                    </div>
+                </div>
+                
+                <div class="chat-input mt-3">
+                    <div class="input-group">
+                        <textarea id="messageInput" class="form-control" placeholder="Type your message here..." rows="2"></textarea>
+                        <button id="sendMessage" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Send
+                        </button>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            Press Shift+Enter to add a new line, Enter to send
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

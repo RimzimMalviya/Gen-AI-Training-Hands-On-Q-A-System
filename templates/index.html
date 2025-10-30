@@ -1,28 +1,227 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>AI Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <h1>AI Dashboard</h1>
-  <form action="/chat" method="post" enctype="multipart/form-data">
-    <label>Select Model:</label><br>
-    <select name="model">
-      <option value="azure">Azure AI</option>
-      <option value="huggingface">HuggingFace</option>
-    </select><br><br>
+{% extends "base.html" %}
 
-    <label>System Message:</label><br>
-    <textarea name="system_message" rows="3" cols="40"></textarea><br><br>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-cog"></i> Configure Your AI Assistant</h4>
+            </div>
+            <div class="card-body">
+                <!-- Configuration Status Alert -->
+                {% if not config_status.azure_configured and not config_status.huggingface_configured %}
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Configuration Required</h5>
+                    <p>No AI providers configured. Please set up either Azure OpenAI or Hugging Face in your <code>.env</code> file.</p>
+                </div>
+                {% elif not config_status.managers_initialized %}
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-times-circle"></i> Initialization Failed</h5>
+                    <p>Chat manager failed to initialize. Check your configuration and server logs.</p>
+                </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle"></i> System Ready</h5>
+                    <p>
+                        {% if config_status.azure_configured %}Azure OpenAI ✓{% endif %}
+                        {% if config_status.huggingface_configured %}Hugging Face ✓{% endif %}
+                    </p>
+                </div>
+                {% endif %}
+                
+                <form id="configForm">
+                    <div class="mb-3">
+                        <label for="modelChoice" class="form-label">Select AI Model</label>
+                        <select class="form-select" id="modelChoice" required>
+                            <option value="">Choose a model...</option>
+                            {% if config_status.azure_configured %}
+                            <option value="azure">Azure OpenAI</option>
+                            {% endif %}
+                            {% if config_status.huggingface_configured %}
+                            <option value="huggingface">Hugging Face Model</option>
+                            {% endif %}
+                        </select>
+                    </div>
 
-    <label>Enable RAG:</label>
-    <input type="checkbox" name="enable_rag"><br><br>
+                    <div class="mb-3">
+                        <label for="systemMessage" class="form-label">System Message</label>
+                        <textarea class="form-control" id="systemMessage" rows="4" 
+                                  placeholder="Define the assistant's behavior and role...">You are a helpful AI assistant. Provide accurate and helpful responses to the user's questions.</textarea>
+                    </div>
 
-    <label>Upload PDF (if RAG enabled):</label>
-    <input type="file" name="pdf"><br><br>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enableRAG">
+                            <label class="form-check-label" for="enableRAG">
+                                Enable RAG (Retrieval Augmented Generation)
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">
+                            When enabled, you can upload PDF documents for the AI to reference in its responses.
+                        </small>
+                    </div>
 
-    <button type="submit">Start Chat</button>
-  </form>
-</body>
-</html>
+                    <div id="ragSection" class="mb-3" style="display: none;">
+                        <label for="documentUpload" class="form-label">Upload PDF Document</label>
+                        <input class="form-control" type="file" id="documentUpload" accept=".pdf">
+                        <small class="form-text text-muted">
+                            Upload a PDF document to enhance the AI's knowledge base.
+                        </small>
+                        <div id="uploadStatus" class="mt-2"></div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-comments"></i> Start Chatting
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> About This Dashboard</h5>
+            </div>
+            <div class="card-body">
+                <p>This AI Chatbot Dashboard allows you to:</p>
+                <ul>
+                    <li>Choose between Azure OpenAI and Hugging Face models</li>
+                    <li>Define custom system messages to guide AI behavior</li>
+                    <li>Enable RAG to augment responses with your own documents</li>
+                    <li>Upload and query PDF documents</li>
+                    <li>Monitor token usage and model performance</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const enableRAG = document.getElementById('enableRAG');
+    const ragSection = document.getElementById('ragSection');
+    const configForm = document.getElementById('configForm');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    // Toggle RAG section
+    if (enableRAG) {
+        enableRAG.addEventListener('change', function() {
+            if (ragSection) {
+                ragSection.style.display = this.checked ? 'block' : 'none';
+            }
+        });
+    }
+
+    // Handle document upload
+    const documentUpload = document.getElementById('documentUpload');
+    if (documentUpload) {
+        documentUpload.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                uploadDocument(this.files[0]);
+            }
+        });
+    }
+
+    function uploadDocument(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        if (uploadStatus) {
+            uploadStatus.innerHTML = '<div class="alert alert-info">Uploading document...</div>';
+        }
+
+        fetch('/api/upload-document', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (uploadStatus) {
+                if (data.success) {
+                    uploadStatus.innerHTML = '<div class="alert alert-success">Document uploaded successfully!</div>';
+                } else {
+                    uploadStatus.innerHTML = `<div class="alert alert-danger">Upload failed: ${data.error}</div>`;
+                }
+            }
+        })
+        .catch(error => {
+            if (uploadStatus) {
+                uploadStatus.innerHTML = `<div class="alert alert-danger">Upload error: ${error}</div>`;
+            }
+        });
+    }
+
+    // Handle form submission
+    if (configForm) {
+        configForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const modelChoice = document.getElementById('modelChoice');
+            const systemMessage = document.getElementById('systemMessage');
+            const enableRAG = document.getElementById('enableRAG');
+
+            if (!modelChoice || !systemMessage) {
+                alert('Form elements not found. Please refresh the page.');
+                return;
+            }
+
+            const formData = {
+                model_choice: modelChoice.value,
+                system_message: systemMessage.value,
+                enable_rag: enableRAG ? enableRAG.checked : false
+            };
+
+            if (!formData.model_choice) {
+                alert('Please select an AI model.');
+                return;
+            }
+
+            console.log('Initializing chat with:', formData);
+
+            // Initialize chat session
+            fetch('/api/initialize-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Enable RAG if selected
+                    if (formData.enable_rag) {
+                        return fetch('/api/toggle-rag', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ enable_rag: true })
+                        });
+                    } else {
+                        return { success: true };
+                    }
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .then(response => response.json ? response.json() : response)
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/chat';
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error initializing chat: ' + error.message);
+                console.error('Chat initialization error:', error);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
