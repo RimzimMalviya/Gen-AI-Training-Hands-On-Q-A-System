@@ -14,11 +14,6 @@
                     <h5><i class="fas fa-exclamation-triangle"></i> Configuration Required</h5>
                     <p>No AI providers configured. Please set up either Azure OpenAI or Hugging Face in your <code>.env</code> file.</p>
                 </div>
-                {% elif not config_status.managers_initialized %}
-                <div class="alert alert-danger">
-                    <h5><i class="fas fa-times-circle"></i> Initialization Failed</h5>
-                    <p>Chat manager failed to initialize. Check your configuration and server logs.</p>
-                </div>
                 {% else %}
                 <div class="alert alert-success">
                     <h5><i class="fas fa-check-circle"></i> System Ready</h5>
@@ -34,13 +29,10 @@
                         <label for="modelChoice" class="form-label">Select AI Model</label>
                         <select class="form-select" id="modelChoice" required>
                             <option value="">Choose a model...</option>
-                            {% if config_status.azure_configured %}
                             <option value="azure">Azure OpenAI</option>
-                            {% endif %}
-                            {% if config_status.huggingface_configured %}
                             <option value="huggingface">Hugging Face Model</option>
-                            {% endif %}
                         </select>
+
                     </div>
 
                     <div class="mb-3">

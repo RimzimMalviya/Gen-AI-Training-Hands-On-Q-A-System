@@ -35,7 +35,6 @@ class ChatInterface {
     }
     
     loadSessionInfo() {
-        // In a real implementation, you might fetch this from the server
         this.currentModel.textContent = 'Azure OpenAI';
         this.ragStatus.textContent = 'Disabled';
         this.ragStatus.className = 'badge bg-secondary';
@@ -45,11 +44,8 @@ class ChatInterface {
         const message = this.messageInput.value.trim();
         if (!message) return;
         
-        // Add user message to chat
         this.addMessage('user', message);
         this.messageInput.value = '';
-        
-        // Show typing indicator
         this.showTypingIndicator();
         
         try {
@@ -63,14 +59,15 @@ class ChatInterface {
                     use_rag: this.useRAG.checked
                 })
             });
-            
+
+            if (!response.ok) throw new Error('Server error while sending message.');
             const data = await response.json();
+
             this.hideTypingIndicator();
-            
             if (data.success) {
                 this.addMessage('assistant', data.response);
             } else {
-                this.addMessage('system', `Error: ${data.error}`);
+                this.addMessage('system', `Error: ${data.error || 'Unknown error'}`);
             }
         } catch (error) {
             this.hideTypingIndicator();
@@ -113,9 +110,7 @@ class ChatInterface {
     
     hideTypingIndicator() {
         const typingIndicator = document.getElementById('typingIndicator');
-        if (typingIndicator) {
-            typingIndicator.remove();
-        }
+        if (typingIndicator) typingIndicator.remove();
     }
     
     scrollToBottom() {
@@ -126,12 +121,12 @@ class ChatInterface {
         try {
             const response = await fetch('/api/clear-chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: { 'Content-Type': 'application/json' }
             });
-            
+
+            if (!response.ok) throw new Error('Server error clearing chat.');
             const data = await response.json();
+
             if (data.success) {
                 this.chatMessages.innerHTML = `
                     <div class="text-center text-muted my-4">
@@ -140,7 +135,7 @@ class ChatInterface {
                     </div>
                 `;
             } else {
-                alert('Error clearing chat: ' + data.error);
+                alert('Error clearing chat: ' + (data.error || 'Unknown error.'));
             }
         } catch (error) {
             alert('Error clearing chat: ' + error.message);
@@ -152,23 +147,21 @@ class ChatInterface {
             const currentStatus = this.ragStatus.textContent === 'Enabled';
             const response = await fetch('/api/toggle-rag', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    enable_rag: !currentStatus
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enable_rag: !currentStatus })
             });
-            
+
+            if (!response.ok) throw new Error('Server error toggling RAG.');
             const data = await response.json();
+
             if (data.success) {
                 this.ragStatus.textContent = !currentStatus ? 'Enabled' : 'Disabled';
                 this.ragStatus.className = !currentStatus ? 'badge bg-success' : 'badge bg-secondary';
-                this.toggleRAGBtn.innerHTML = !currentStatus ? 
-                    '<i class="fas fa-toggle-on"></i> Switch RAG' : 
-                    '<i class="fas fa-toggle-off"></i> Switch RAG';
+                this.toggleRAGBtn.innerHTML = !currentStatus 
+                    ? '<i class="fas fa-toggle-on"></i> Switch RAG' 
+                    : '<i class="fas fa-toggle-off"></i> Switch RAG';
             } else {
-                alert('Error toggling RAG: ' + data.error);
+                alert('Error toggling RAG: ' + (data.error || 'Unknown error.'));
             }
         } catch (error) {
             alert('Error toggling RAG: ' + error.message);
@@ -187,15 +180,22 @@ class ChatInterface {
                 method: 'POST',
                 body: formData
             });
+
+            if (!response.ok) throw new Error(`Server error: ${response.status}`);
             
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch {
+                throw new Error('Invalid JSON response from server.');
+            }
+
             if (data.success) {
                 uploadStatus.innerHTML = '<span class="text-success">Document uploaded successfully!</span>';
-                // Enable RAG after successful upload
                 this.ragStatus.textContent = 'Enabled';
                 this.ragStatus.className = 'badge bg-success';
             } else {
-                uploadStatus.innerHTML = `<span class="text-danger">Upload failed: ${data.error}</span>`;
+                uploadStatus.innerHTML = `<span class="text-danger">Upload failed: ${data.error || 'Unknown error'}</span>`;
             }
         } catch (error) {
             uploadStatus.innerHTML = `<span class="text-danger">Upload error: ${error.message}</span>`;
@@ -203,7 +203,6 @@ class ChatInterface {
     }
 }
 
-// Initialize chat interface when page loads
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
     new ChatInterface();
 });
